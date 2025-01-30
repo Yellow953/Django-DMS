@@ -1,0 +1,72 @@
+# .gitignore for Django
+
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# PyCharm
+.idea/
+.idea_modules/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+### Django ###
+# Local settings
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Database
+*.sqlite3
+*.db
+
+# Media and static files
+/media/
+/staticfiles/
+/static/
+
+# Logs
+*.log
+logs/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+### macOS ###
+.DS_Store
+
+### Windows ###
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Local development
+local_settings.py
