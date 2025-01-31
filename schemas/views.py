@@ -1,4 +1,5 @@
 from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 from .models import DynamicSchema, SchemaField
 from .serializers import (
     DynamicSchemaSerializer,
@@ -6,14 +7,20 @@ from .serializers import (
 )
 
 class SchemaListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    
     queryset = DynamicSchema.objects.all()
     serializer_class = DynamicSchemaSerializer
 
 class SchemaRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+    
     queryset = DynamicSchema.objects.all()
     serializer_class = DynamicSchemaSerializer
 
 class SchemaFieldCreateView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+
     queryset = SchemaField.objects.all()
     serializer_class = SchemaFieldSerializer
 
@@ -23,5 +30,7 @@ class SchemaFieldCreateView(generics.CreateAPIView):
         serializer.save(schema=schema)
 
 class SchemaFieldUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
     queryset = SchemaField.objects.all()
     serializer_class = SchemaFieldSerializer

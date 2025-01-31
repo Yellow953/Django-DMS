@@ -9,5 +9,9 @@ class DataEntryListView(generics.ListCreateAPIView):
     ordering_fields = ['created_at']
 
     def get_queryset(self):
-        schema_id = self.kwargs['schema_id']
-        return DataEntry.objects.filter(schema_id=schema_id)
+        queryset = DataEntry.objects.filter(schema_id=schema_id)
+        search_term = self.request.query_params.get('search')
+        if search_term:
+            queryset = queryset.filter(data__icontains=search_term)
+            
+        return queryset

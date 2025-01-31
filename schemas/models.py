@@ -20,6 +20,6 @@ class SchemaField(models.Model):
 
 class DataEntry(models.Model):
     schema = models.ForeignKey(DynamicSchema, on_delete=models.CASCADE)
-    data = models.JSONField()
+    data = models.JSONField(db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
