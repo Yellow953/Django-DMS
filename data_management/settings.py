@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     
     'schemas',
     'data_import',
-    'api',
 
     'django_filters',
 ]
