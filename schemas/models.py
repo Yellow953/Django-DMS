@@ -19,7 +19,6 @@ class SchemaField(models.Model):
     unique = models.BooleanField(default=False)
 
 class DataEntry(models.Model):
-    schema = models.ForeignKey(DynamicSchema, on_delete=models.CASCADE)
     data = models.JSONField(db_index=True)
+    schema = models.ForeignKey(DynamicSchema, on_delete=models.CASCADE, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
-

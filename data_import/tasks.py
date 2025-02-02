@@ -7,76 +7,74 @@ from django.conf import settings
 from schemas.models import DynamicSchema, DataEntry, SchemaField
 
 def validate_csv_row(row, schema):
-    """
-    Validate a CSV row against the schema's field definitions
-    """
     errors = []
-    
     for field in schema.fields.all():
         value = row.get(field.name)
         
         if field.required and not value:
-            errors.append(f"{field.name} is required")
+            errors.append(f"{field.name}: Required")
             continue
-            
+        
+        if not value and not field.required:
+            continue
+        
         try:
-            if field.field_type == 'number':
+            if field.field_type == 'text':
+                if not isinstance(value, str):
+                    raise ValueError("Must be text")
+                    
+            elif field.field_type == 'number':
                 float(value)
+                
             elif field.field_type == 'date':
                 datetime.strptime(value, '%Y-%m-%d')
+                
             elif field.field_type == 'boolean':
                 if value.lower() not in ['true', 'false', '1', '0']:
-                    raise ValueError()
-        except (ValueError, TypeError):
-            errors.append(f"{field.name}: Invalid {field.field_type} format")
-            
-        if field.unique and value:
+                    raise ValueError("Use true/false, 1/0")
+                
+        except (ValueError, TypeError, AttributeError) as e:
+            errors.append(f"{field.name}: Invalid {field.field_type} ({str(e)})")
+        
+        if field.unique:
             exists = DataEntry.objects.filter(
                 schema=schema,
                 data__contains={field.name: value}
             ).exists()
             if exists:
-                errors.append(f"{field.name} must be unique")
+                errors.append(f"{field.name}: Must be unique")
     
     if errors:
-        raise ValidationError(", ".join(errors))
+        raise ValidationError(errors)
 
 @shared_task
 def process_csv_import(schema_id, csv_path, user_email):
-    """
-    Process CSV import asynchronously
-    """
     schema = DynamicSchema.objects.get(id=schema_id)
     errors = []
     success_count = 0
-    entries_to_create = []
 
     try:
         with open(csv_path, 'r') as csv_file:
             reader = csv.DictReader(csv_file)
-            
-            for i, row in enumerate(reader, start=1):
+            for row_number, row in enumerate(reader, start=1):
                 try:
                     validate_csv_row(row, schema)
-                    entries_to_create.append(
-                        DataEntry(schema=schema, data=row)
-                    )
+                    DataEntry.objects.create(schema=schema, data=row)
                     success_count += 1
-                    
-                    if len(entries_to_create) >= 1000:
-                        DataEntry.objects.bulk_create(entries_to_create)
-                        entries_to_create = []
-                        
                 except ValidationError as e:
-                    errors.append(f"Row {i}: {', '.join(e.messages)}")
+                    errors.append({
+                        "row": row_number,
+                        "errors": e.messages,
+                        "data": row 
+                    })
 
-        if entries_to_create:
-            DataEntry.objects.bulk_create(entries_to_create)
-
-        subject = "CSV Import Complete"
+        subject = "CSV Import Report"
+        error_list = "\n".join(
+            [f"Row {e['row']}: {', '.join(e['errors'])}" for e in errors[:10]]  
+        )
         message = (
-            f"Successfully imported {success_count} records.\n"
-            f"Errors ({len(errors)}):\n" + "\n".join(errors[:10])
+            f"Imported {success_count} rows successfully.\n"
+            f"Errors ({len(errors)}):\n{error_list}"
         )
         
         send_mail(
@@ -89,10 +87,9 @@ def process_csv_import(schema_id, csv_path, user_email):
 
     except Exception as e:
         send_mail(
-            subject="CSV Import Failed",
-            message=f"Critical error during import: {str(e)}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user_email],
-            fail_silently=False
+            "CSV Import Failed",
+            f"Critical error: {str(e)}",
+            settings.DEFAULT_FROM_EMAIL,
+            [user_email]
         )
-        raise 
+        raise

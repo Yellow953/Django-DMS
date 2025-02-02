@@ -8,9 +8,13 @@ from .serializers import (
 
 class SchemaListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = PageNumberPagination
     
     queryset = DynamicSchema.objects.all()
     serializer_class = DynamicSchemaSerializer
+
+    def get_paginated_response(self, data):
+        return self.paginator.get_paginated_response(data)
 
 class SchemaRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]

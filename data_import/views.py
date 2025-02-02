@@ -1,26 +1,48 @@
 from rest_framework.views import APIView
-from rest_framework import generics
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status, generics
+from rest_framework import status, generics, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import DataEntryFilter
 from schemas.models import DataEntry, DynamicSchema
 from .serializers import DataEntrySerializer
 from .tasks import process_csv_import
 from django.core.files.storage import default_storage
 
 class DataEntryListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
     serializer_class = DataEntrySerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = DataEntryFilter
+    ordering_fields = ['created_at']
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         schema_id = self.kwargs['schema_id']
-        return DataEntry.objects.filter(schema_id=schema_id)
+        self.schema = generics.get_object_or_404(DynamicSchema, id=schema_id)
+        return DataEntry.objects.filter(schema=self.schema)
 
-    def perform_create(self, serializer):
-        schema_id = self.kwargs['schema_id']
-        schema = DynamicSchema.objects.get(id=schema_id)
-        serializer.save(schema=schema)
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['schema'] = self.schema
+        return context
+
+    def filter_queryset(self, queryset):
+        ordering = self.request.query_params.get('ordering', '')
+        if ordering.startswith('data__'):
+            field_name = ordering.replace('data__', '')
+            return queryset.order_by(
+                models.F(f"data__{field_name}")
+            )
+        return super().filter_queryset(queryset)
+    
+    def get_paginated_response(self, data):
+        response = super().get_paginated_response(data)
+        response.data['schema'] = {
+            "id": self.schema.id,
+            "name": self.schema.name
+        }
+        return response
 
 class DataEntryRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
